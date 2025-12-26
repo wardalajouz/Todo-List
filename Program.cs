@@ -1,30 +1,62 @@
-
 using Microsoft.EntityFrameworkCore;
 using TodoList.Models;
-
+using TodoList.Services;
+//using Microsoft.OpenApi;
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+
 builder.Services.AddDbContext<AppDbContext>(opt =>
 {
     opt.UseInMemoryDatabase("TodoDb");
 });
+
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
+// Register your Service
+builder.Services.AddScoped<TodoService>();
+
+// Configure CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        policy => policy.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader());
+});
+
 builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();          
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    context.Database.EnsureCreated();
+
+    if (!context.Todos.Any())
+    {
+        context.Todos.Add(new Todo { TaskName = "Finish Frontend", IsCompleted = false });
+        context.Todos.Add(new Todo { TaskName = "Learn CORS", IsCompleted = true });
+        context.SaveChanges();
+    }
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();   
+    app.UseSwaggerUI(); 
 }
 
 app.UseHttpsRedirection();
 
-app.UseAuthorization();
 
+app.UseCors("AllowAll");
+
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();

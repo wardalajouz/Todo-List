@@ -1,71 +1,57 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
-using System.Reflection.Metadata.Ecma335;
+﻿using Microsoft.AspNetCore.Mvc;
 using TodoList.Dtos;
-using TodoList.Models;
+using TodoList.Services;
 
 namespace TodoList.Controllers
 {
-    [Route("api/Todo")]
     [ApiController]
+    [Route("api/[controller]")]
     public class TodoController : ControllerBase
     {
-        private readonly AppDbContext? _context;
+        private readonly TodoService _todoService;
 
-        public TodoController(AppDbContext context)
+        public TodoController(TodoService todoService)
         {
-            _context = context;
-            if (_context is null )
+            _todoService = todoService;
+        }
+
+        [HttpGet]
+        public IActionResult Get()
+        {
+            return Ok(_todoService.GetAllTodos());
+        }
+
+        [HttpPost("Create")]
+        public IActionResult Create([FromBody] CreateTaskDTO dto)
+        {
+            var newTask = _todoService.CreateTodo(dto);
+
+            if (newTask == null)
             {
-                throw new ArgumentNullException(nameof(context));
+                return BadRequest("A task with this name already exists.");
             }
-        } 
 
-        [HttpGet("GetTodos")]
-        public IActionResult GetTodos()
-        {
-            var Todos = _context?.Todos.Select(t => t.ToGetTaskDto()).ToList() ;
-            
-            return Ok(Todos);
-        }
-        [HttpPost("CreateTodo")]
-        public IActionResult CreateTodo(CreateTaskDTO Task)
-        {
-            Todo todo = new Todo {TaskName=Task.TaskName};
-            _context?.Todos.Add(todo);
-            if (_context?.SaveChanges()>0)
-            { 
-
-                return Ok("Created");
-            }
-            return BadRequest("Failed to create todo");
-
-
+            return CreatedAtAction(nameof(Get), new { id = newTask.Id }, newTask);
         }
 
-        [HttpPut("UpdateTodo")]
-        public IActionResult UpdateTodo(string Task)
+        [HttpPut("Update")]
+        public IActionResult Update(UpdateTaskDTO dto)
         {
+            if (!_todoService.UpdateTodo(dto)) return NotFound();
             return Ok("Updated");
         }
 
-        [HttpDelete("DeleteTodo")]
-        public IActionResult DeleteTodo(string Task)
+        [HttpDelete("Delete")]
+        public IActionResult Delete(DeleteTaskDTO dto)
         {
+            if (!_todoService.DeleteTodo(dto.Id)) return NotFound();
             return Ok("Deleted");
-
         }
-       
-        
-
+        [HttpPatch("Toggle/{id}")]
+        public IActionResult Toggle(int id)
+        {
+            if (!_todoService.ToggleStatus(id)) return NotFound();
+            return Ok("Status updated");
+        }
     }
-    public record CreateTaskDTO(string TaskName);
-    public record UpdateTaskDTO(int Id,string TaskName);
-
-    public record DeleteTaskDTO(int Id);
-
-
-    
-
 }

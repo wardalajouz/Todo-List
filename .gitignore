@@ -482,3 +482,15 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# --- Frontend Stuff ---
+node_modules/
+dist/
+.env
+
+# --- Backend Stuff ---
+bin/
+obj/
+.vs/
+appsettings.Development.json
+*.user
